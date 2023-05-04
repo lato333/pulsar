@@ -65,7 +65,7 @@ Comma<T>: Vec<T> = {
 }
 
 Value: String = {
-    r#"".[^\s]+""# => <>.trim_matches('"').to_string(),
+    r#"".[^ \t\r\n\f]+""# => <>.trim_matches('"').to_string(),
     r"[0-9]+" => <>.to_string()
 }
 
@@ -85,7 +85,7 @@ Operator: Operator = {
 }
 
 Field: Field = {
-    <s: r"[a-zA-Z]\w+[\.[a-zA-Z]\w+]*"> =>? Field::from_str(<>)
+    <s: r"[a-zA-Z][a-zA-Z0-9_]+[\.[a-zA-Z][a-zA-Z0-9_]+]*"> =>? Field::from_str(<>)
         .map_err(|err| ParseError::User {
             error: DslError::Field {
                 field: <>.to_string(),
