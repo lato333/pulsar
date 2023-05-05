@@ -1,4 +1,7 @@
 use std::{collections::HashSet, fmt, time::Duration};
+use pulsar_core::pdk::Payload;
+use bpf_common::parsing::IndexError;
+use pulsar_core::pdk::IntoPayload;
 
 use bpf_common::{
     aya::{include_bytes_aligned, Pod},
@@ -15,10 +18,10 @@ pub async fn program(
     mut sender: impl BpfSender<ActivityT>,
 ) -> Result<Program, ProgramError> {
     let mut activity_cache: std::collections::HashMap<i32, ActivityT> = Default::default();
-    let program = ProgramBuilder::new(
+    let mut program = ProgramBuilder::new(
         ctx,
         MODULE_NAME,
-        include_bytes_aligned!(concat!(env!("OUT_DIR"), "/probe.bpf.o")).into(),
+        include_bytes_aligned!(concat!(env!("OUT_DIR"), "/probes.full.bpf.o")).into(),
     )
     .tracepoint("raw_syscalls", "sys_enter")
     .tracepoint("sched", "sched_process_exit")
@@ -27,8 +30,8 @@ pub async fn program(
     program
         .poll("activities", Duration::from_millis(10), move |result| {
             let map = match result {
-                Ok(map) => map,
-                Err(e) => return sender.send(Err(e)),
+                map => map,
+               
             };
             // map is an iterator over Result<item, MapError>
             let map = map.iter().flat_map(|item| match item {
@@ -57,6 +60,7 @@ pub async fn program(
                     pid: Pid::from_raw(pid),
                     timestamp: Timestamp::now(),
                     payload: activity,
+                    buffer: "".into()
                 }))
             }
             // remove exited processes to avoid a memory leak.
@@ -95,6 +99,18 @@ impl fmt::Display for ActivityT {
             }
         }
         Ok(())
+    }
+}
+
+impl IntoPayload for ActivityT {
+    type Error = IndexError;
+    fn try_into_payload(event: BpfEvent<ActivityT>) -> Result<Payload, IndexError> {
+        let BpfEvent {
+            payload, ..
+        } = event;
+        Ok(match payload {
+            histogram => Payload::from(histogram)
+        })
     }
 }
 
