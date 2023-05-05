@@ -73,8 +73,8 @@ int sys_enter(struct trace_event_raw_sys_enter *ctx) {
 // When a process exits, we cleanup the activities map
 // FIXME: since activity check is poll based, we'll generate
 // no events for short-lived processes.
-SEC("raw_tracepoint/sched_process_exit")
-int BPF_PROG(sched_process_exit, struct task_struct *p) {
+SEC("tracepoint/sched_process_exit")
+int sched_process_exit(struct task_struct *p) {
   pid_t tgid;
   if (!is_thread(&tgid)) {
     bpf_map_delete_elem(&activities, &tgid);
