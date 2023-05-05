@@ -31,7 +31,7 @@ pub async fn program(
     .start().await?;
     
     program
-        .poll("activities", Duration::from_millis(10), move |result| {
+        .poll("activities", Duration::from_millis(1000), move |result| {
             let map = result;
             // map is an iterator over Result<item, MapError>
             let map = map.iter().flat_map(|item| match item {

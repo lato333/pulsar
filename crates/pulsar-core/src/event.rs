@@ -296,7 +296,7 @@ impl fmt::Display for Payload {
             Payload::CgroupCreated { cgroup_path, cgroup_id } => write!(f,"Cgroup created {{ cgroup_path: {cgroup_path}, cgroup_id: {cgroup_id} }}"),
             Payload::CgroupDeleted { cgroup_path, cgroup_id } => write!(f,"Cgroup deleted {{ cgroup_path: {cgroup_path}, cgroup_id: {cgroup_id} }}"),
             Payload::CgroupAttach { cgroup_path, cgroup_id, attached_pid } => write!(f,"Process attached to cgroup {{ cgroup_path: {cgroup_path}, cgroup_id: {cgroup_id}, attached_pid {attached_pid} }}"),
-            Payload::SyscallActivity { .. } => write!(f,"Syscall Activity"),
+            Payload::SyscallActivity { histogram } => write!(f,"Syscall Activity: {:?}",histogram),
             Payload::Bind { address, is_tcp } => write!(f,"Bind {{ address: {address}, is_tcp: {is_tcp} }}"),
             Payload::Listen { address } => write!(f,"Listen {{ address: {address} }}"),  
             Payload::Connect { destination, is_tcp } => write!(f,"Connect {{ destination: {destination}, is_tcp: {is_tcp} }}"),
