@@ -14,25 +14,25 @@ use bpf_common::{
 
 const MODULE_NAME: &str = "syscall-monitor";
 
+
 pub async fn program(
     ctx: BpfContext,
     mut sender: impl BpfSender<ActivityT>,
 ) -> Result<Program, ProgramError> {
-    let mut activity_cache: std::collections::HashMap<i32, ActivityT> = Default::default();
-    
     let binary = ebpf_program!(&ctx, "probes");
-
-    let mut program = ProgramBuilder::new(ctx, MODULE_NAME, binary)
+    let mut activity_cache: std::collections::HashMap<i32, ActivityT> = Default::default();
+    let mut program = ProgramBuilder::new(
+        ctx,
+        MODULE_NAME,
+        binary
+    )
     .tracepoint("raw_syscalls", "sys_enter")
-    .tracepoint("sched", "sched_process_exit")
-    .start()
-    .await?;
+    .raw_tracepoint("sched_process_exit")
+    .start().await?;
+    
     program
         .poll("activities", Duration::from_millis(10), move |result| {
-            let map = match result {
-                map => map,
-               
-            };
+            let map = result;
             // map is an iterator over Result<item, MapError>
             let map = map.iter().flat_map(|item| match item {
                 Err(e) => {
@@ -60,16 +60,24 @@ pub async fn program(
                     pid: Pid::from_raw(pid),
                     timestamp: Timestamp::now(),
                     payload: activity,
-                    buffer: "".into()
+                    buffer: "".to_string().into()
                 }))
             }
             // remove exited processes to avoid a memory leak.
             activity_cache.retain(|pid, _| running_processes.contains(pid));
         })
         .await?;
+        
     Ok(program)
 }
 
+#[derive(Debug)]
+#[repr(C)]
+pub enum SyscallEvent {
+    SyscallActivity {
+        histogram: Vec<u64>,
+    },
+}
 /// The data stored on the C side
 #[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
@@ -114,6 +122,7 @@ impl IntoPayload for ActivityT {
     }
 }
 
+
 pub mod pulsar {
     use super::*;
     use pulsar_core::pdk::{
@@ -123,7 +132,6 @@ pub mod pulsar {
     pub fn module() -> PulsarModule {
         PulsarModule::new(MODULE_NAME, Version::new(0, 0, 1), syscall_monitor_task)
     }
-
     async fn syscall_monitor_task(
         ctx: ModuleContext,
         mut shutdown: ShutdownSignal,
@@ -131,6 +139,7 @@ pub mod pulsar {
         let _program = program(ctx.get_bpf_context(), ctx.get_sender()).await?;
         shutdown.recv().await
     }
+
 
     impl From<ActivityT> for Payload {
         fn from(data: ActivityT) -> Self {

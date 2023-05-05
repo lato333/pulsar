@@ -5,7 +5,7 @@
 char LICENSE[] SEC("license") = "Dual BSD/GPL";
 
 #define MAX_SYSCALLS 512
-
+/*
 typedef struct activity {
   uint64_t histogram[MAX_SYSCALLS];
 } activity_t;
@@ -24,7 +24,27 @@ struct  {
     __type(value_size, sizeof(activity_t));
     __uint(max_entries, 1);
 } memory SEC(".maps");
+*/
 
+
+typedef struct activity {
+  uint64_t histogram[MAX_SYSCALLS];
+} activity_t;
+
+struct  {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key,pid_t);
+    __type(value, activity_t);
+    __uint(max_entries, 4096);
+} activities SEC(".maps/activities");
+
+// used in order to manipulate objects bigger than the 512 bytes stack limit
+struct {
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __type(key, int);
+    __type(value, activity_t);
+    __uint(max_entries, 1);
+} memory SEC(".maps/memory");
 
 // struct trace_event_raw_sys_enter {
 //         struct trace_entry ent;
@@ -73,9 +93,12 @@ int sys_enter(struct trace_event_raw_sys_enter *ctx) {
 // When a process exits, we cleanup the activities map
 // FIXME: since activity check is poll based, we'll generate
 // no events for short-lived processes.
-SEC("tracepoint/sched_process_exit")
-int sched_process_exit(struct task_struct *p) {
+
+// This is attached to tracepoint:sched:sched_process_exit
+SEC("raw_tracepoint/sched_process_exit")
+int BPF_PROG(sched_process_exit, struct task_struct *p) {
   pid_t tgid;
+  
   if (!is_thread(&tgid)) {
     bpf_map_delete_elem(&activities, &tgid);
   }
