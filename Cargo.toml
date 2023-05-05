@@ -22,6 +22,7 @@ pulsar-core = { path = "crates/pulsar-core" }
 file-system-monitor = { path = "crates/modules/file-system-monitor", optional = true }
 process-monitor = { path = "crates/modules/process-monitor", optional = true }
 network-monitor = { path = "crates/modules/network-monitor", optional = true }
+syscall-monitor = { path = "crates/modules/syscall-monitor", optional = true }
 logger = { path = "crates/modules/logger", optional = true }
 rules-engine = { path = "crates/modules/rules-engine", optional = true }
 desktop-notifier = { path = "crates/modules/desktop-notifier", optional = true }
