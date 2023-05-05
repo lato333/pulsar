@@ -6,6 +6,7 @@ use pulsar_core::pdk::IntoPayload;
 use bpf_common::{
     aya::{include_bytes_aligned, Pod},
     platform::SYSCALLS,
+    ebpf_program,
     program::{BpfContext, BpfEvent},
     time::Timestamp,
     BpfSender, Pid, Program, ProgramBuilder, ProgramError, MAX_SYSCALLS,
@@ -18,11 +19,10 @@ pub async fn program(
     mut sender: impl BpfSender<ActivityT>,
 ) -> Result<Program, ProgramError> {
     let mut activity_cache: std::collections::HashMap<i32, ActivityT> = Default::default();
-    let mut program = ProgramBuilder::new(
-        ctx,
-        MODULE_NAME,
-        include_bytes_aligned!(concat!(env!("OUT_DIR"), "/probes.full.bpf.o")).into(),
-    )
+    
+    let binary = ebpf_program!(&ctx, "probes");
+
+    let mut program = ProgramBuilder::new(ctx, MODULE_NAME, binary)
     .tracepoint("raw_syscalls", "sys_enter")
     .tracepoint("sched", "sched_process_exit")
     .start()
