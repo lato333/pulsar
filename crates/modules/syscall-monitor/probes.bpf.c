@@ -10,20 +10,21 @@ typedef struct activity {
   uint64_t histogram[MAX_SYSCALLS];
 } activity_t;
 
-struct bpf_map_def SEC("maps/activities") activities = {
-    .type = BPF_MAP_TYPE_HASH,
-    .key_size = sizeof(pid_t),
-    .value_size = sizeof(activity_t),
-    .max_entries = 4096,
-};
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __type(key_size,  sizeof(pid_t));
+    __type(value_size, sizeof(activity_t));
+    __uint(max_entries, 4096);
+} activities SEC(".maps");
 
 // used in order to manipulate objects bigger than the 512 bytes stack limit
-struct bpf_map_def SEC("maps/memory") memory = {
-    .type = BPF_MAP_TYPE_PERCPU_ARRAY,
-    .key_size = sizeof(int),
-    .value_size = sizeof(activity_t),
-    .max_entries = 1,
-};
+struct  {
+    __uint(type, BPF_MAP_TYPE_PERCPU_ARRAY);
+    __type(key_size, sizeof(int));
+    __type(value_size, sizeof(activity_t));
+    __uint(max_entries, 1);
+} memory SEC(".maps");
+
 
 // struct trace_event_raw_sys_enter {
 //         struct trace_entry ent;
@@ -33,9 +34,7 @@ struct bpf_map_def SEC("maps/memory") memory = {
 // };
 SEC("tracepoint/sys_enter")
 int sys_enter(struct trace_event_raw_sys_enter *ctx) {
-  pid_t tgid = interesting_tgid();
-  if (tgid < 0)
-    return 0;
+  pid_t tgid = bpf_get_current_pid_tgid() >> 32; 
 
   activity_t *activity = bpf_map_lookup_elem(&activities, &tgid);
   // if we can't find it, initialize it
@@ -74,8 +73,8 @@ int sys_enter(struct trace_event_raw_sys_enter *ctx) {
 // When a process exits, we cleanup the activities map
 // FIXME: since activity check is poll based, we'll generate
 // no events for short-lived processes.
-SEC("tracepoint/sched_process_exit")
-int sched_process_exit(struct sched_process_exit_args *ctx) {
+SEC("raw_tracepoint/sched_process_exit")
+int BPF_PROG(sched_process_exit, struct task_struct *p) {
   pid_t tgid;
   if (!is_thread(&tgid)) {
     bpf_map_delete_elem(&activities, &tgid);
