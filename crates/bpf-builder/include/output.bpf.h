@@ -7,8 +7,8 @@
   /* Event struct definition */                                                \
   struct struct_name {                                                         \
     u64 timestamp;                                                             \
-    pid_t pid;                                                                 \
     u64 cgroupid;                                                            \
+    pid_t pid;                                                                 \
     struct {                                                                   \
       u32 event_type;                                                          \
       union variants;                                                          \

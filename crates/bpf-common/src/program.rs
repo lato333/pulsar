@@ -457,6 +457,7 @@ impl Program {
                                 sender.send(Ok(BpfEvent {
                                     timestamp: raw.timestamp,
                                     pid: raw.pid,
+                                    cgroupid: raw.cgroupid,
                                     payload: raw.payload,
                                     buffer,
                                 }))
@@ -497,6 +498,7 @@ impl Program {
 #[derive(Debug)]
 pub struct BpfEvent<P> {
     pub timestamp: Timestamp,
+    pub cgroupid: u64,
     pub pid: Pid,
     pub payload: P,
     pub buffer: Bytes,
@@ -505,6 +507,7 @@ pub struct BpfEvent<P> {
 #[repr(C)]
 pub struct RawBpfEvent<P> {
     timestamp: Timestamp,
+    cgroupid: u64,
     pid: Pid,
     payload: P,
     buffer: Buffer,
