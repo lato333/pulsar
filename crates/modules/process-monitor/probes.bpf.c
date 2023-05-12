@@ -112,6 +112,7 @@ int BPF_PROG(process_fork, struct task_struct *parent,
   event->event_type = EVENT_FORK;
   event->buffer.len = 0;
   event->timestamp = bpf_ktime_get_ns();
+  event->cgroupid = bpf_get_current_cgroup_id();
   event->pid = child_tgid;
   event->fork.ppid = parent_tgid;
 
@@ -131,6 +132,7 @@ int BPF_PROG(sched_process_exec, struct task_struct *p, pid_t old_pid,
     return 0;
   event->event_type = EVENT_EXEC;
   event->buffer.len = 0;
+  event->cgroupid = bpf_get_current_cgroup_id();
   event->timestamp = bpf_ktime_get_ns();
   event->pid = tgid;
   event->exec.argc = BPF_CORE_READ(bprm, argc);
@@ -242,6 +244,7 @@ int BPF_PROG(sched_process_exit, struct task_struct *p) {
   if (!event)
     return 0;
   event->event_type = EVENT_EXIT;
+  event->cgroupid = bpf_get_current_cgroup_id();
   event->timestamp = bpf_ktime_get_ns();
   // The PID is the thread id of the progress group leader
   event->pid = tgid;
@@ -278,6 +281,7 @@ int BPF_PROG(sched_switch) {
       return 0;
     event->event_type = EVENT_CHANGE_PARENT;
     event->buffer.len = 0;
+    event->cgroupid = bpf_get_current_cgroup_id();
     event->timestamp = pending->timestamp;
     event->pid = BPF_CORE_READ(orphan, pid);
     event->change_parent.ppid = BPF_CORE_READ(orphan, parent, pid);
@@ -297,6 +301,7 @@ int BPF_PROG(cgroup_mkdir, struct cgroup *cgrp, const char *path) {
   if (!event)
     return 0;
   event->event_type = EVENT_CGROUP_MKDIR;
+  event->cgroupid = bpf_get_current_cgroup_id();
   event->timestamp = bpf_ktime_get_ns();
   event->pid = tgid;
   event->buffer.len = 0;
@@ -318,6 +323,7 @@ int BPF_PROG(cgroup_rmdir, struct cgroup *cgrp, const char *path) {
   if (!event)
     return 0;
   event->event_type = EVENT_CGROUP_RMDIR;
+  event->cgroupid = bpf_get_current_cgroup_id();
   event->timestamp = bpf_ktime_get_ns();
   event->pid = tgid;
   event->buffer.len = 0;
@@ -340,6 +346,7 @@ int BPF_PROG(cgroup_attach_task, struct cgroup *cgrp, const char *path,
   if (!event)
     return 0;
   event->event_type = EVENT_CGROUP_ATTACH;
+  event->cgroupid = bpf_get_current_cgroup_id();
   event->timestamp = bpf_ktime_get_ns();
   event->pid = tgid;
   event->buffer.len = 0;

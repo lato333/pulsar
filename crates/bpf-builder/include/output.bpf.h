@@ -8,6 +8,7 @@
   struct struct_name {                                                         \
     u64 timestamp;                                                             \
     pid_t pid;                                                                 \
+    u64 cgroupid;                                                            \
     struct {                                                                   \
       u32 event_type;                                                          \
       union variants;                                                          \
@@ -26,6 +27,7 @@
       return NULL;                                                             \
                                                                                \
     event->event_type = event_variant;                                         \
+    event->cgroupid = bpf_get_current_cgroup_id();                             \
     event->timestamp = bpf_ktime_get_ns();                                     \
     event->pid = tgid;                                                         \
     event->buffer.len = 0;                                                     \
