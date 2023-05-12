@@ -29,6 +29,7 @@ struct  {
 
 typedef struct activity {
   uint64_t histogram[MAX_SYSCALLS];
+  uint64_t cgroupid;
 } activity_t;
 
 struct  {
@@ -85,6 +86,7 @@ int sys_enter(struct trace_event_raw_sys_enter *ctx) {
   // check any array access into a map"
   uint32_t syscall_number = ctx->id & (MAX_SYSCALLS - 1);
   activity->histogram[syscall_number]++;
+  activity->cgroupid = bpf_get_current_cgroup_id();
   bpf_map_update_elem(&activities, &tgid, activity, BPF_ANY);
 
   return 0;

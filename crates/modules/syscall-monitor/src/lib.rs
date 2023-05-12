@@ -58,6 +58,7 @@ pub async fn program(
 
                 sender.send(Ok(BpfEvent {
                     pid: Pid::from_raw(pid),
+                    cgroupid: activity.cgroupid,
                     timestamp: Timestamp::now(),
                     payload: activity,
                     buffer: "".to_string().into()
@@ -83,6 +84,7 @@ pub enum SyscallEvent {
 #[repr(C)]
 pub struct ActivityT {
     histogram: [u64; MAX_SYSCALLS],
+    cgroupid: u64
 }
 
 unsafe impl Pod for ActivityT {}
@@ -91,6 +93,7 @@ impl Default for ActivityT {
     fn default() -> Self {
         Self {
             histogram: [0; MAX_SYSCALLS],
+            cgroupid: 0
         }
     }
 }
